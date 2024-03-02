@@ -1,13 +1,17 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"flag"
 	"log"
 	"os"
 	"os/exec"
 	"regexp"
+	"os/signal"
 	"strconv"
+	"sync"
+	"syscall"
 )
 
 var blanceRegex = regexp.MustCompile(`balance: (\d+\.\d+)`)
@@ -62,6 +66,15 @@ func main() {
 		}
 	}
 
+	var wg sync.WaitGroup
+	ctx, cancel := context.WithCancel(context.Background())
+
+	defer func() {
+		log.Println("Exiting...")
+		os.Exit(0)
+	}()
+
+
 	for _, val := range cfg.Validators {
 		args := make([]string, 0)
 		args = append(args, "--path", cfg.WalletPath, "tx", "bond")
@@ -76,9 +89,34 @@ func main() {
 			args = append(args, "--server", *rpc)
 		}
 
-		out, err := exec.Command(cfg.PactusWalletExecPath, args...).Output()
+		wg.Add(1)
+		go runCmd(ctx, cfg.PactusWalletExecPath, val.Address, &wg, args...)
+	}
+
+	go func() {
+		interrupt := make(chan os.Signal, 1)
+		signal.Notify(interrupt, os.Interrupt, syscall.SIGTERM)
+
+		select {
+		case s := <-interrupt:
+			cancel()
+			log.Printf("task canceled by user, %s", s.String())
+		}
+	}()
+
+	wg.Wait()
+}
+
+func runCmd(ctx context.Context, pactusWalletExecPath, validator string, wg *sync.WaitGroup, args ...string) {
+	defer wg.Done()
+
+	select {
+	case <-ctx.Done():
+		return
+	default:
+		out, err := exec.CommandContext(ctx, pactusWalletExecPath, args...).Output()
 		if err != nil {
-			log.Fatalf("err: %s, msg: %s", err.Error(), string(out))
+			log.Printf("validator: %s err: %s, msg: %s", validator, err.Error(), string(out))
 		}
 		log.Println(string(out))
 	}
