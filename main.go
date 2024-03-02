@@ -26,7 +26,7 @@ type Validator struct {
 }
 
 func main() {
-	cfgPath := flag.String("config", "./cfg.json", "confiamount = g file path")
+	cfgPath := flag.String("config", "./cfg.json", "config file path")
 	password := flag.String("password", "", "pactus wallet password")
 	rpc := flag.String("server", "", "custom node rpc")
 	total := flag.Bool("total", false, "determine that all balance of account will be staked")
