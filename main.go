@@ -7,8 +7,8 @@ import (
 	"log"
 	"os"
 	"os/exec"
-	"regexp"
 	"os/signal"
+	"regexp"
 	"strconv"
 	"sync"
 	"syscall"
@@ -70,10 +70,8 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	defer func() {
-		log.Println("Exiting...")
 		os.Exit(0)
 	}()
-
 
 	for _, val := range cfg.Validators {
 		args := make([]string, 0)
@@ -100,7 +98,7 @@ func main() {
 		select {
 		case s := <-interrupt:
 			cancel()
-			log.Printf("task canceled by user, %s", s.String())
+			log.Printf("staker canceled by user, %s", s.String())
 		}
 	}()
 
@@ -117,6 +115,7 @@ func runCmd(ctx context.Context, pactusWalletExecPath, validator string, wg *syn
 		out, err := exec.CommandContext(ctx, pactusWalletExecPath, args...).Output()
 		if err != nil {
 			log.Printf("validator: %s err: %s, msg: %s", validator, err.Error(), string(out))
+			return
 		}
 		log.Println(string(out))
 	}
