@@ -29,6 +29,7 @@ Pactus bond tools for multiple stake by config, you can stake many validators in
 - `validators` is list of validators for stake **note: if your address is first time for validator need set public key in `pub`**
 
 2. run tools with `./staker -config ./cfg.json -password foobar`
-- `-config` config file path default is `./cfg.json`
-- `-password` is optional for wallet password
-- `-server` is for custom node rpc address
+- `--config` config file path default is `./cfg.json`
+- `--password` is optional for wallet password
+- `--server` is for custom node rpc address
+- `--total` is a flag that ignore amount it config and it will stake whole of account balance

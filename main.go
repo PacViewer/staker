@@ -7,11 +7,14 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"regexp"
 	"os/signal"
 	"strconv"
 	"sync"
 	"syscall"
 )
+
+var blanceRegex = regexp.MustCompile(`balance: (\d+\.\d+)`)
 
 type Cfg struct {
 	PactusWalletExecPath string      `json:"pactus_wallet_exec_path"`
@@ -30,6 +33,8 @@ func main() {
 	cfgPath := flag.String("config", "./cfg.json", "config file path")
 	password := flag.String("password", "", "pactus wallet password")
 	rpc := flag.String("server", "", "custom node rpc")
+	total := flag.Bool("total", false, "determine that all balance of account will be staked")
+
 	flag.Parse()
 
 	b, err := os.ReadFile(*cfgPath)
@@ -45,6 +50,22 @@ func main() {
 
 	amount := strconv.FormatFloat(cfg.Amount, 'g', -1, 64)
 
+	if *total {
+		args := make([]string, 0)
+		args = append(args, "address", "balance", cfg.WalletAddress)
+		out, err := exec.Command(cfg.PactusWalletExecPath, args...).Output()
+		if err != nil {
+			log.Fatalf("err: %s, msg: %s", err.Error(), string(out))
+		}
+
+		match := blanceRegex.FindStringSubmatch(string(out))
+		if len(match) > 1 {
+			amount = match[1]
+		} else {
+			log.Fatalf("err: can't find the address balance, msg: %s", string(out))
+		}
+	}
+
 	var wg sync.WaitGroup
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -52,6 +73,7 @@ func main() {
 		log.Println("Exiting...")
 		os.Exit(0)
 	}()
+
 
 	for _, val := range cfg.Validators {
 		args := make([]string, 0)
